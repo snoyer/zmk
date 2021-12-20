@@ -19,10 +19,11 @@ static struct zmk_hid_consumer_report consumer_report = {.report_id = 2, .body =
 // Only release the modifier if the count is 0.
 static int explicit_modifier_counts[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static zmk_mod_flags_t explicit_modifiers = 0;
+static zmk_mod_flags_t masked_modifiers = 0;
 
 #define SET_MODIFIERS(mods)                                                                        \
     {                                                                                              \
-        keyboard_report.body.modifiers = mods;                                                     \
+        keyboard_report.body.modifiers = (mods) & ~masked_modifiers;                               \
         LOG_DBG("Modifiers set to 0x%02X", keyboard_report.body.modifiers);                        \
     }
 
@@ -146,6 +147,18 @@ int zmk_hid_implicit_modifiers_release() {
     zmk_mod_flags_t current = GET_MODIFIERS;
     SET_MODIFIERS(explicit_modifiers);
     return current == GET_MODIFIERS ? 0 : 1;
+}
+
+int zmk_hid_masked_modifiers_set(zmk_mod_flags_t new_masked_modifiers) {
+    masked_modifiers = new_masked_modifiers;
+    SET_MODIFIERS(explicit_modifiers);
+    return 0;
+}
+
+int zmk_hid_masked_modifiers_clear() {
+    masked_modifiers = 0;
+    SET_MODIFIERS(explicit_modifiers);
+    return 0;
 }
 
 int zmk_hid_keyboard_press(zmk_key_t code) {

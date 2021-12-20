@@ -14,7 +14,7 @@ The Mod-Morph behavior sends a different keypress, depending on whether a specif
 
 The Mod-Morph behavior acts as one of two keycodes, depending on if the required modifier is being held during the keypress.
 
-When the modifier is being held it is sent along with the morphed keycode. This can cause problems when the morphed keycode and modifier have an existing relationship (such as `shift-delete` or `ctrl-v` on many operating systems).
+When the modifier is being held it is sent along with the morphed keycode. This can cause problems when the morphed keycode and modifier have an existing relationship (such as `shift-delete` or `ctrl-v` on many operating systems). The optional `masked_mods` attribute can be used to inhibit modifiers while the required modifier is held.
 
 ### Configuration
 
