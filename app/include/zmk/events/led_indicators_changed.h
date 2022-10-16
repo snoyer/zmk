@@ -11,6 +11,7 @@
 
 struct zmk_led_indicators_changed {
     zmk_led_indicators_flags_t leds;
+    bool is_from_host;
 };
 
 ZMK_EVENT_DECLARE(zmk_led_indicators_changed);

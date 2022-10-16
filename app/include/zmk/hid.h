@@ -55,7 +55,7 @@ static const uint8_t zmk_hid_report_desc[] = {
     HID_REPORT_SIZE(0x03),
     HID_REPORT_COUNT(0x01),
     /* OUTPUT (Cnst,Var,Abs) */
-    HID_OUTPUT(0x03),
+    HID_OUTPUT(0x01),
 
     HID_USAGE_PAGE(HID_USAGE_KEY),
 

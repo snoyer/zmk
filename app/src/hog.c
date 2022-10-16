@@ -59,9 +59,7 @@ static struct hids_report led_indicators = {
 };
 
 static struct hids_report consumer_input = {
-    .id = 0x02,
     .id = HID_REPORT_ID_CONSUMER,
-    .type = HIDS_INPUT,
     .type = HIDS_INPUT,
 };
 

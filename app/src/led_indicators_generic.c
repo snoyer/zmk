@@ -10,74 +10,102 @@
 #include <zmk/ble.h>
 #include <zmk/endpoints.h>
 #include <zmk/led_indicators.h>
-#include <zmk/events/led_indicator_changed.h>
+#include <zmk/profiles.h>
+#include <zmk/events/led_indicators_changed.h>
 #include <zmk/events/endpoint_selection_changed.h>
+#include <zmk/events/keycode_state_changed.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-#define NUM_USB_PROFILES (COND_CODE_1(IS_ENABLED(CONFIG_ZMK_USB), (1), (0)))
-#define NUM_BLE_PROFILES (COND_CODE_1(IS_ENABLED(CONFIG_ZMK_BLE), (CONFIG_BT_MAX_CONN), (0)))
-#define NUM_PROFILES (NUM_USB_PROFILES + NUM_BLE_PROFILES)
-
-static zmk_led_indicators_flags_t led_flags[NUM_PROFILES];
-
-static size_t profile_index(enum zmk_endpoint endpoint, uint8_t profile) {
-    switch (endpoint) {
-    case ZMK_ENDPOINT_USB:
-        return 0;
-    case ZMK_ENDPOINT_BLE:
-        return NUM_USB_PROFILES + profile;
-    }
-
-    CODE_UNREACHABLE;
-}
+static zmk_led_indicators_flags_t led_indicators_flags[ZMK_PROFILE_COUNT] = {0};
+static bool led_indicators_flags_is_from_host[ZMK_PROFILE_COUNT] = {false};
 
 zmk_led_indicators_flags_t zmk_led_indicators_get_current_flags() {
-    enum zmk_endpoint endpoint = zmk_endpoints_selected();
-    uint8_t profile = 0;
-
-#if IS_ENABLED(CONFIG_ZMK_BLE)
-    if (endpoint == ZMK_ENDPOINT_USB) {
-        profile = zmk_ble_active_profile_index();
-    }
-#endif
-
-    return zmk_led_indicators_get_flags(endpoint, profile);
+    const size_t index = zmk_current_profile_index();
+    return led_indicators_flags[index];
 }
 
-zmk_led_indicators_flags_t zmk_led_indicators_get_flags(enum zmk_endpoint endpoint,
-                                                        uint8_t profile) {
-    size_t index = profile_index(endpoint, profile);
-    return led_flags[index];
+zmk_led_indicators_flags_t zmk_led_indicators_get_flags(zmk_profile_index_t profile_index) {
+    return led_indicators_flags[profile_index];
 }
 
 static void raise_led_indicators_changed_event(struct k_work *_work) {
-    ZMK_EVENT_RAISE(new_zmk_led_indicators_changed(
-        (struct zmk_led_indicators_changed){.leds = zmk_led_indicators_get_current_flags()}));
+    const size_t profile_index = zmk_current_profile_index();
+    ZMK_EVENT_RAISE(new_zmk_led_indicators_changed((struct zmk_led_indicators_changed){
+        .leds = led_indicators_flags[profile_index],
+        .is_from_host = led_indicators_flags_is_from_host[profile_index],
+    }));
 }
 
-static K_WORK_DEFINE(led_changed_work, raise_led_indicators_changed_event);
+static K_WORK_DEFINE(led_indicators_changed_work, raise_led_indicators_changed_event);
 
-void zmk_led_indicators_update_flags(zmk_led_indicators_flags_t leds, enum zmk_endpoint endpoint,
-                                     uint8_t profile) {
-    size_t index = profile_index(endpoint, profile);
-    led_flags[index] = leds;
+void zmk_led_indicators_update_flags_from_host(zmk_led_indicators_flags_t leds,
+                                               enum zmk_endpoint endpoint, uint8_t profile) {
+    const zmk_profile_index_t profile_index = zmk_profile_index(endpoint, profile);
 
-    k_work_submit(&led_changed_work);
+    led_indicators_flags[profile_index] = leds;
+    led_indicators_flags_is_from_host[profile_index] = true;
+
+    k_work_submit(&led_indicators_changed_work);
+
+    LOG_DBG("leds for profile %d reported to be 0x%x", profile_index, leds);
+}
+
+void zmk_led_indicators_update_flags_from_self(zmk_led_indicators_flags_t leds,
+                                               zmk_profile_index_t profile_index) {
+    led_indicators_flags[profile_index] = leds;
+    led_indicators_flags_is_from_host[profile_index] = false;
+
+    k_work_submit(&led_indicators_changed_work);
+
+    LOG_DBG("leds for profile %d expected to be 0x%x", profile_index, leds);
 }
 
 void zmk_led_indicators_process_report(struct zmk_hid_led_report_body *report,
                                        enum zmk_endpoint endpoint, uint8_t profile) {
-    zmk_led_indicators_flags_t leds = report->leds;
-    zmk_led_indicators_update_flags(leds, endpoint, profile);
-
-    LOG_DBG("Update LED indicators: endpoint=%d, profile=%d, flags=%x", endpoint, profile, leds);
+    const zmk_led_indicators_flags_t leds = report->leds;
+    zmk_led_indicators_update_flags_from_host(leds, endpoint, profile);
 }
 
-static int endpoint_listener(const zmk_event_t *eh) {
+static int led_indicators_endpoint_listener(const zmk_event_t *eh) {
     raise_led_indicators_changed_event(NULL);
-    return 0;
+    return ZMK_EV_EVENT_BUBBLE;
 }
+static ZMK_LISTENER(led_indicators_endpoint_listener, led_indicators_endpoint_listener);
+static ZMK_SUBSCRIPTION(led_indicators_endpoint_listener, zmk_endpoint_selection_changed);
 
-static ZMK_LISTENER(endpoint_listener, endpoint_listener);
-static ZMK_SUBSCRIPTION(endpoint_listener, zmk_endpoint_selection_changed);
+static int led_indicators_keycode_state_changed_listener(const zmk_event_t *eh) {
+    struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
+    if (ev == NULL || !ev->state) {
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+
+    if (ev->usage_page == HID_USAGE_KEY) {
+        zmk_led_indicators_flags_t flip_mask = 0;
+
+        switch (ev->keycode) {
+        case HID_USAGE_KEY_KEYPAD_NUM_LOCK_AND_CLEAR:
+            flip_mask = ZMK_LED_INDICATORS_NUMLOCK_BIT;
+            break;
+        case HID_USAGE_KEY_KEYBOARD_CAPS_LOCK:
+            flip_mask = ZMK_LED_INDICATORS_CAPSLOCK_BIT;
+            break;
+        case HID_USAGE_KEY_KEYBOARD_SCROLL_LOCK:
+            flip_mask = ZMK_LED_INDICATORS_SCROLLLOCK_BIT;
+            break;
+        default:
+            break;
+        }
+
+        if (flip_mask) {
+            const zmk_profile_index_t profile_index = zmk_current_profile_index();
+            zmk_led_indicators_update_flags_from_self(
+                led_indicators_flags[profile_index] ^ flip_mask, profile_index);
+        }
+    }
+
+    return ZMK_EV_EVENT_BUBBLE;
+}
+static ZMK_LISTENER(led_indicators_keycode_state_changed_listener,
+                    led_indicators_keycode_state_changed_listener);
+static ZMK_SUBSCRIPTION(led_indicators_keycode_state_changed_listener, zmk_keycode_state_changed);

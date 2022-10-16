@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 The ZMK Contributors
+ * Copyright (c) 2022 The ZMK Contributors
  *
  * SPDX-License-Identifier: MIT
  */
@@ -16,8 +16,10 @@
 #if ZMK_BLE_IS_CENTRAL
 #define ZMK_BLE_PROFILE_COUNT (CONFIG_BT_MAX_PAIRED - 1)
 #define ZMK_BLE_SPLIT_PERIPHERAL_COUNT 1
-#else
+#elif IS_ENABLED(CONFIG_ZMK_BLE)
 #define ZMK_BLE_PROFILE_COUNT CONFIG_BT_MAX_PAIRED
+#else
+#define ZMK_BLE_PROFILE_COUNT 0
 #endif
 
 int zmk_ble_clear_bonds();
