@@ -37,8 +37,8 @@ static void raise_led_indicators_changed_event(struct k_work *_work) {
 
 static K_WORK_DEFINE(led_indicators_changed_work, raise_led_indicators_changed_event);
 
-void zmk_led_indicators_update_flags(zmk_led_indicators_flags_t leds,
-                                               enum zmk_endpoint endpoint, uint8_t profile) {
+void zmk_led_indicators_update_flags(zmk_led_indicators_flags_t leds, enum zmk_endpoint endpoint,
+                                     uint8_t profile) {
     const zmk_profile_index_t profile_index = zmk_profile_index(endpoint, profile);
 
     led_indicators_flags[profile_index] = leds;
