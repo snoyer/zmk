@@ -35,7 +35,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/keys.h>
 #include <zmk/split/bluetooth/uuid.h>
 #include <zmk/event_manager.h>
-#include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/ble_profile_changed.h>
 
 #if IS_ENABLED(CONFIG_ZMK_BLE_PASSKEY_ENTRY)
 #include <zmk/events/keycode_state_changed.h>
@@ -83,16 +83,19 @@ static bt_addr_le_t peripheral_addrs[ZMK_SPLIT_BLE_PERIPHERAL_COUNT];
 
 #endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) */
 
-static void raise_profile_changed_event(void) {
-    raise_zmk_ble_active_profile_changed((struct zmk_ble_active_profile_changed){
-        .index = active_profile, .profile = &profiles[active_profile]});
+static void raise_active_profile_changed_event(void) {
+    raise_zmk_ble_profile_changed((struct zmk_ble_profile_changed){
+        .index = active_profile,
+        .profile = &profiles[active_profile],
+        .active = true,
+    });
 }
 
-static void raise_profile_changed_event_callback(struct k_work *work) {
-    raise_profile_changed_event();
+static void raise_active_profile_changed_event_callback(struct k_work *work) {
+    raise_active_profile_changed_event();
 }
 
-K_WORK_DEFINE(raise_profile_changed_event_work, raise_profile_changed_event_callback);
+K_WORK_DEFINE(raise_active_profile_changed_event_work, raise_active_profile_changed_event_callback);
 
 bool zmk_ble_active_profile_is_open(void) { return zmk_ble_profile_is_open(active_profile); }
 
@@ -115,7 +118,7 @@ void set_profile_address(uint8_t index, const bt_addr_le_t *addr) {
 #if IS_ENABLED(CONFIG_SETTINGS)
     settings_save_one(setting_name, &profiles[index], sizeof(struct zmk_ble_profile));
 #endif
-    k_work_submit(&raise_profile_changed_event_work);
+    k_work_submit(&raise_active_profile_changed_event_work);
 }
 
 bool zmk_ble_active_profile_is_connected(void) {
@@ -299,7 +302,7 @@ int zmk_ble_prof_select(uint8_t index) {
 
     update_advertising();
 
-    raise_profile_changed_event();
+    raise_active_profile_changed_event();
 
     return 0;
 };
@@ -524,7 +527,7 @@ static void connected(struct bt_conn *conn, uint8_t err) {
 
     if (is_conn_active_profile(conn)) {
         LOG_DBG("Active profile connected");
-        k_work_submit(&raise_profile_changed_event_work);
+        k_work_submit(&raise_active_profile_changed_event_work);
     }
 }
 
@@ -549,7 +552,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason) {
 
     if (is_conn_active_profile(conn)) {
         LOG_DBG("Active profile disconnected");
-        k_work_submit(&raise_profile_changed_event_work);
+        k_work_submit(&raise_active_profile_changed_event_work);
     }
 }
 

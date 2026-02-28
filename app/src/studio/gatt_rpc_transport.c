@@ -14,7 +14,7 @@
 
 #include <zmk/ble.h>
 #include <zmk/event_manager.h>
-#include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/ble_profile_changed.h>
 #include <zmk/studio/rpc.h>
 
 #include "uuid.h"
@@ -213,6 +213,12 @@ ZMK_RPC_TRANSPORT(gatt, ZMK_TRANSPORT_BLE, gatt_start_rx, gatt_stop_rx, gatt_tx_
                   gatt_tx_notify);
 
 static int gatt_rpc_listener(const zmk_event_t *eh) {
+
+    struct zmk_ble_profile_changed *ev = as_zmk_ble_profile_changed(eh);
+    if (ev != NULL && !ev->active) {
+        return 0;
+    }
+
     refresh_notify_size();
 
 #if IS_ENABLED(CONFIG_ZMK_STUDIO_LOCK_ON_DISCONNECT)
@@ -229,4 +235,4 @@ static int gatt_rpc_listener(const zmk_event_t *eh) {
 }
 
 ZMK_LISTENER(gatt_rpc_listener, gatt_rpc_listener);
-ZMK_SUBSCRIPTION(gatt_rpc_listener, zmk_ble_active_profile_changed);
+ZMK_SUBSCRIPTION(gatt_rpc_listener, zmk_ble_profile_changed);

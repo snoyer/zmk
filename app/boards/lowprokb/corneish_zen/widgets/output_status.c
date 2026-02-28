@@ -14,7 +14,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/display.h>
 #include "output_status.h"
 #include <zmk/event_manager.h>
-#include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/ble_profile_changed.h>
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/usb.h>
 #include <zmk/ble.h>
@@ -114,7 +114,7 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
 // We don't get an endpoint changed event when the active profile connects/disconnects
 // but there wasn't another endpoint to switch from/to, so update on BLE events too.
 #if defined(CONFIG_ZMK_BLE)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
+ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_profile_changed);
 #endif
 
 int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_obj_t *parent) {

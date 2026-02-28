@@ -5,6 +5,6 @@
  */
 
 #include <zephyr/kernel.h>
-#include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/ble_profile_changed.h>
 
-ZMK_EVENT_IMPL(zmk_ble_active_profile_changed);
+ZMK_EVENT_IMPL(zmk_ble_profile_changed);

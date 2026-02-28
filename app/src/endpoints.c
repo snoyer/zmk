@@ -17,7 +17,7 @@
 #include <zmk/hog.h>
 #include <zmk/endpoints.h>
 #include <zmk/event_manager.h>
-#include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/events/ble_profile_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/events/endpoint_changed.h>
 
@@ -506,7 +506,7 @@ ZMK_LISTENER(endpoint_listener, endpoint_listener);
 ZMK_SUBSCRIPTION(endpoint_listener, zmk_usb_conn_state_changed);
 #endif
 #if IS_ENABLED(CONFIG_ZMK_BLE)
-ZMK_SUBSCRIPTION(endpoint_listener, zmk_ble_active_profile_changed);
+ZMK_SUBSCRIPTION(endpoint_listener, zmk_ble_profile_changed);
 #endif
 
 SYS_INIT(zmk_endpoints_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
