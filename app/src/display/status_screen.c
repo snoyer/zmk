@@ -65,5 +65,71 @@ lv_obj_t *zmk_display_status_screen() {
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
     lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 #endif
+
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+    zmk_display_status_screen_test();
+#endif
+
     return screen;
 }
+
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+
+void display_status_screen_test() {
+    void wait_for_refresh() { k_sleep(K_MSEC(100)); }
+
+    battery_status_update_cb((struct battery_status_state){.level = 0, .usb_present = true});
+    layer_status_update_cb((struct layer_status_state){.label = "qwerty"});
+    output_status_update_cb((struct output_status_state){});
+    wait_for_refresh();
+
+    uint8_t levels[] = {100, 70, 40, 10, 0};
+    for (int i = 0; i < sizeof(levels); i++) {
+        LOG_DBG("battery = %d%%", levels[i]);
+        battery_status_update_cb((struct battery_status_state){.level = levels[i]});
+        wait_for_refresh();
+    }
+
+    LOG_DBG("BLE preferred, USB selected");
+    output_status_update_cb((struct output_status_state){
+        .selected_endpoint = {ZMK_TRANSPORT_USB},
+        .preferred_transport = ZMK_TRANSPORT_BLE,
+        .active_profile_connected = false,
+        .active_profile_bonded = true,
+    });
+    wait_for_refresh();
+
+    LOG_DBG("BLE preferred, BLE 1 selected, not bonded");
+    output_status_update_cb((struct output_status_state){
+        .selected_endpoint = {ZMK_TRANSPORT_BLE, .ble = {0}},
+        .preferred_transport = ZMK_TRANSPORT_BLE,
+        .active_profile_connected = false,
+        .active_profile_bonded = false,
+    });
+    wait_for_refresh();
+
+    LOG_DBG("BLE preferred, BLE 2 selected, not connected");
+    output_status_update_cb((struct output_status_state){
+        .selected_endpoint = {ZMK_TRANSPORT_BLE, .ble = {1}},
+        .preferred_transport = ZMK_TRANSPORT_BLE,
+        .active_profile_connected = false,
+        .active_profile_bonded = true,
+    });
+    wait_for_refresh();
+
+    LOG_DBG("BLE preferred, BLE 3 selected, connected");
+    output_status_update_cb((struct output_status_state){
+        .selected_endpoint = {ZMK_TRANSPORT_BLE, .ble = {2}},
+        .preferred_transport = ZMK_TRANSPORT_BLE,
+        .active_profile_connected = true,
+        .active_profile_bonded = true,
+    });
+    wait_for_refresh();
+}
+void display_status_screen_test_cb(struct k_work *work) { display_status_screen_test(); }
+static K_WORK_DELAYABLE_DEFINE(display_status_screen_test_work, display_status_screen_test_cb);
+void zmk_display_status_screen_test() {
+    k_work_schedule(&display_status_screen_test_work, K_MSEC(100));
+}
+
+#endif // IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)

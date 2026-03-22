@@ -19,19 +19,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-struct battery_status_state {
-    uint8_t level;
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    bool usb_present;
-#endif
-};
-
 static void set_battery_symbol(lv_obj_t *label, struct battery_status_state state) {
     char text[9] = {};
 
     uint8_t level = state.level;
 
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK) || IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
     if (state.usb_present) {
         strcpy(text, LV_SYMBOL_CHARGE " ");
     }
@@ -62,6 +55,8 @@ void battery_status_update_cb(struct battery_status_state state) {
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_symbol(widget->obj, state); }
 }
 
+#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING)
+
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
     const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
 
@@ -81,12 +76,16 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
+#endif /* IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING) */
+
 int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_obj_t *parent) {
     widget->obj = lv_label_create(parent);
 
     sys_slist_append(&widgets, &widget->node);
 
+#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING)
     widget_battery_status_init();
+#endif /* IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING) */
     return 0;
 }
 

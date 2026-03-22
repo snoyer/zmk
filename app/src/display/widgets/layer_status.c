@@ -17,11 +17,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-struct layer_status_state {
-    zmk_keymap_layer_index_t index;
-    const char *label;
-};
-
 static void set_layer_symbol(lv_obj_t *label, struct layer_status_state state) {
     if (state.label == NULL || strlen(state.label) == 0) {
         char text[8] = {};
@@ -38,7 +33,7 @@ static void set_layer_symbol(lv_obj_t *label, struct layer_status_state state) {
     }
 }
 
-static void layer_status_update_cb(struct layer_status_state state) {
+void layer_status_update_cb(struct layer_status_state state) {
     struct zmk_widget_layer_status *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_layer_symbol(widget->obj, state); }
 }

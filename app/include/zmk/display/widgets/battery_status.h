@@ -16,3 +16,11 @@ struct zmk_widget_battery_status {
 
 int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_obj_t *parent);
 lv_obj_t *zmk_widget_battery_status_obj(struct zmk_widget_battery_status *widget);
+
+struct battery_status_state {
+    uint8_t level;
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK) || IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+    bool usb_present;
+#endif
+};
+void battery_status_update_cb(struct battery_status_state state);
