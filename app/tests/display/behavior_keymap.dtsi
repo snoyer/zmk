@@ -1,0 +1,24 @@
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    keymap {
+        compatible = "zmk,keymap";
+        layer0 {
+            bindings = <
+                &none &none
+                &none &none
+            >;
+        };
+    };
+
+    chosen {
+        zephyr,display = &dummy_dc;
+    };
+    dummy_dc: dummy_dc {
+        compatible = "zephyr,dummy-dc";
+        width = <128>;
+        height = <64>;
+    };
+};

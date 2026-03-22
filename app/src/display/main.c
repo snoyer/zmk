@@ -22,6 +22,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/activity_state_changed.h>
 #include <zmk/display/status_screen.h>
 
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+#include "snapshot.h"
+#endif
+
 static const struct device *display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
 #if DT_HAS_CHOSEN(zmk_display_led)
@@ -117,6 +121,10 @@ static void initialize_theme() {
 #endif // CONFIG_LV_USE_THEME_MONO
 }
 
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+static void print_snapshot_cb(lv_event_t *e) { print_snapshot(lv_scr_act()); }
+#endif
+
 void initialize_display(struct k_work *work) {
     LOG_DBG("");
 
@@ -124,6 +132,10 @@ void initialize_display(struct k_work *work) {
         LOG_ERR("Failed to find display device");
         return;
     }
+
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_TESTING_SHAPSHOTS)
+    lv_display_add_event_cb(lv_display_get_default(), print_snapshot_cb, LV_EVENT_REFR_READY, NULL);
+#endif
 
     initialized = true;
 

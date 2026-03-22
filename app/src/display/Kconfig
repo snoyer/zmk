@@ -175,4 +175,11 @@ endchoice
 
 rsource "widgets/Kconfig"
 
+config ZMK_DISPLAY_TESTING_SHAPSHOTS
+    bool "Enable display testing by printing LVGL snapshots to stdout"
+    select LV_USE_SNAPSHOT
+    select LV_USE_THEME_MONO
+    select DUMMY_DISPLAY
+    depends on BOARD_NATIVE_SIM
+
 endif
